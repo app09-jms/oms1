@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { nullIfEmpty } from '@/lib/payload';
+import { cleanPayload, nullIfEmpty } from '@/lib/payload';
 import {
   normalizeDraft,
   type EmployeeDraft,
@@ -78,22 +78,22 @@ function toProfile(row: EmployeeProfileRow): EmployeeProfile {
 
 function toProfilePayload(draft: EmployeeDraft) {
   const values = normalizeDraft(draft);
-  return {
+  return cleanPayload({
     full_name: values.fullName,
-    display_name: values.displayName || null,
+    display_name: nullIfEmpty(values.displayName),
     department: values.department,
     position: nullIfEmpty(values.position),
-    probation_date: values.probationDate || null,
-    official_date: values.officialDate || null,
+    probation_date: nullIfEmpty(values.probationDate),
+    official_date: nullIfEmpty(values.officialDate),
     employment_status: values.employmentStatus,
-    phone: values.phone || null,
-    email: values.email || null,
+    phone: nullIfEmpty(values.phone),
+    email: nullIfEmpty(values.email),
     hotel_id: values.hotelId,
-    citizen_id: values.citizenId || null,
-    citizen_id_issued_date: values.citizenIdIssuedDate || null,
-    citizen_id_issued_place: values.citizenIdIssuedPlace || null,
-    permanent_address: values.permanentAddress || null,
-  };
+    citizen_id: nullIfEmpty(values.citizenId),
+    citizen_id_issued_date: nullIfEmpty(values.citizenIdIssuedDate),
+    citizen_id_issued_place: nullIfEmpty(values.citizenIdIssuedPlace),
+    permanent_address: nullIfEmpty(values.permanentAddress),
+  });
 }
 
 function toDatabaseError(error: { code?: string; message: string }, fallback: string): Error {
@@ -122,10 +122,10 @@ export async function insertEmployees(drafts: EmployeeDraft[], options: Provisio
     code: normalizeDraft(draft).code,
     ...toProfilePayload(draft),
     leave_tracking: options.trackLeave,
-    initial_leave_days: options.initialLeaveDays,
+    initial_leave_days: options.initialLeaveDays ?? 0,
   }));
 
-  const { error } = await supabase.from('employees').insert(rows);
+  const { error } = await supabase.from('employees').insert(rows).select('code');
   if (error) throw toDatabaseError(error, 'Không thể lưu hồ sơ nhân viên. Vui lòng thử lại.');
 }
 
