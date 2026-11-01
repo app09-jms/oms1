@@ -18,8 +18,8 @@ export interface EmployeeProfile {
   code: string;
   fullName: string;
   displayName: string;
-  department: string;
-  position: string;
+  department: string | null;
+  position: string | null;
   probationDate: string | null;
   officialDate: string | null;
   employmentStatus: EmploymentStatus;
@@ -40,8 +40,8 @@ export interface EmployeeDraft {
   code: string;
   fullName: string;
   displayName: string;
-  department: string;
-  position: string;
+  department: string | null;
+  position: string | null;
   probationDate: string;
   officialDate: string;
   employmentStatus: EmploymentStatus;
@@ -92,7 +92,7 @@ export function createEmptyDraft(hotelId: string): EmployeeDraft {
     code: '',
     fullName: '',
     displayName: '',
-    department: DEPARTMENTS[0],
+    department: DEPARTMENTS[0] ?? null,
     position: '',
     probationDate: '',
     officialDate: '',
@@ -127,8 +127,8 @@ export function normalizeDraft(draft: EmployeeDraft): EmployeeDraft {
     code: draft.code.trim(),
     fullName: draft.fullName.trim(),
     displayName: draft.displayName.trim(),
-    department: draft.department.trim(),
-    position: draft.position.trim(),
+    department: draft.department === null ? null : draft.department.trim(),
+    position: draft.position === null ? null : draft.position.trim(),
     probationDate: draft.probationDate.trim(),
     officialDate: draft.officialDate.trim(),
     employmentStatus: draft.employmentStatus,
@@ -155,7 +155,7 @@ export function validateDraft(input: EmployeeDraft): string | null {
   if (draft.citizenIdIssuedDate && !DATE_PATTERN.test(draft.citizenIdIssuedDate)) {
     return 'Ngày cấp CCCD không hợp lệ.';
   }
-  if (!(DEPARTMENTS as readonly string[]).includes(draft.department)) return 'Bộ phận không hợp lệ.';
+  if (draft.department !== null && !(DEPARTMENTS as readonly string[]).includes(draft.department)) return 'Bộ phận không hợp lệ.';
   if (draft.probationDate && !DATE_PATTERN.test(draft.probationDate)) return 'Ngày thử việc không hợp lệ.';
   if (draft.officialDate && !DATE_PATTERN.test(draft.officialDate)) return 'Ngày chính thức không hợp lệ.';
   if (!(EMPLOYMENT_STATUSES as readonly string[]).includes(draft.employmentStatus)) {

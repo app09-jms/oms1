@@ -93,10 +93,10 @@ export function EmployeeTable({
                   </div>
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-[#1F2A30]">{profile.displayName || '—'}</TableCell>
-                <TableCell className="whitespace-nowrap text-[#1F2A30]">{profile.department}</TableCell>
+                <TableCell className="whitespace-nowrap text-[#1F2A30]">{profile.department || 'Chưa phân loại'}</TableCell>
                 <TableCell className="whitespace-nowrap text-[#1F2A30]">{hotelNameById.get(profile.hotelId) ?? '—'}</TableCell>
                 <TableCell className="whitespace-nowrap tabular-nums text-[#1F2A30]">{profile.citizenId || '—'}</TableCell>
-                <TableCell className="whitespace-nowrap text-[#1F2A30]">{profile.position || '—'}</TableCell>
+                <TableCell className="whitespace-nowrap text-[#1F2A30]">{profile.position || 'Chưa phân loại'}</TableCell>
                 <TableCell className="whitespace-nowrap tabular-nums text-[#1F2A30]">
                   {formatDisplayDate(profile.probationDate)}
                 </TableCell>

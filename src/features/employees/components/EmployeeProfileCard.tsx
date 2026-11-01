@@ -50,7 +50,7 @@ export function EmployeeProfileCard({ profile, hotelName }: EmployeeProfileCardP
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <h2 className="text-xl font-semibold text-[#1F2A30]">{profile.fullName}</h2>
-          <p className="text-sm text-[#5C6670]">{profile.position || profile.department}</p>
+          <p className="text-sm text-[#5C6670]">{profile.position || profile.department || 'Chưa phân loại'}</p>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <Badge variant="outline" className="border-[#E2E8F0] bg-white font-medium tabular-nums text-[#1F2A30]">
               {profile.code}
@@ -83,9 +83,9 @@ export function EmployeeProfileCard({ profile, hotelName }: EmployeeProfileCardP
         <section className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-[#1F2A30]">Công việc & Phòng ban</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <InfoItem icon={Building2} label="Phòng ban" value={profile.department} />
+            <InfoItem icon={Building2} label="Phòng ban" value={profile.department || 'Chưa phân loại'} />
             <InfoItem icon={Building2} label="Khách sạn" value={hotelName} />
-            <InfoItem icon={Briefcase} label="Chức vụ" value={profile.position} />
+            <InfoItem icon={Briefcase} label="Chức vụ" value={profile.position || 'Chưa phân loại'} />
             <InfoItem icon={CalendarDays} label="Ngày vào làm" value={formatDisplayDate(startDate)} />
           </div>
         </section>

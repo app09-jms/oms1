@@ -58,7 +58,7 @@ export interface ClosingKpis {
 export interface LockSnapshot {
   employee_code: string;
   full_name: string;
-  department: string;
+  department: string | null;
   credited_hours: number;
   ot_hours: number;
   off_days: number;

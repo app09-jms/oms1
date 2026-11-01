@@ -113,11 +113,15 @@ export function EmployeeFormDialog({
               />
             </Field>
             <Field label="Bộ phận" htmlFor="employee-department">
-              <Select value={draft.department} onValueChange={(value) => update('department', value)}>
+              <Select
+                value={draft.department ?? '__none__'}
+                onValueChange={(value) => update('department', value === '__none__' ? null : value)}
+              >
                 <SelectTrigger id="employee-department" className={fieldClass}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">Chưa phân loại</SelectItem>
                   {DEPARTMENTS.map((department) => (
                     <SelectItem key={department} value={department}>
                       {department}
@@ -129,8 +133,8 @@ export function EmployeeFormDialog({
             <Field label="Chức vụ" htmlFor="employee-position">
               <Input
                 id="employee-position"
-                value={draft.position}
-                onChange={(event) => update('position', event.target.value)}
+                value={draft.position ?? ''}
+                onChange={(event) => update('position', event.target.value || null)}
                 placeholder="Nhân viên lễ tân"
                 className={fieldClass}
               />

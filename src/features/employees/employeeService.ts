@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { nullIfEmpty } from '@/lib/payload';
 import {
   normalizeDraft,
   type EmployeeDraft,
@@ -14,7 +15,7 @@ interface EmployeeProfileRow {
   code: string;
   full_name: string;
   display_name: string | null;
-  department: string;
+  department: string | null;
   position: string | null;
   probation_date: string | null;
   official_date: string | null;
@@ -41,7 +42,7 @@ function isProfileRow(value: unknown): value is EmployeeProfileRow {
     typeof row.system_uid === 'string' &&
     typeof row.code === 'string' &&
     typeof row.full_name === 'string' &&
-    typeof row.department === 'string' &&
+    (typeof row.department === 'string' || row.department === null) &&
     typeof row.employment_status === 'string' &&
     typeof row.has_account === 'boolean' &&
     typeof row.leave_tracking === 'boolean' &&
@@ -56,8 +57,8 @@ function toProfile(row: EmployeeProfileRow): EmployeeProfile {
     code: row.code,
     fullName: row.full_name,
     displayName: row.display_name ?? '',
-    department: row.department,
-    position: row.position ?? '',
+    department: row.department ?? null,
+    position: row.position ?? null,
     probationDate: row.probation_date,
     officialDate: row.official_date,
     employmentStatus: row.employment_status,
@@ -81,7 +82,7 @@ function toProfilePayload(draft: EmployeeDraft) {
     full_name: values.fullName,
     display_name: values.displayName || null,
     department: values.department,
-    position: values.position,
+    position: nullIfEmpty(values.position),
     probation_date: values.probationDate || null,
     official_date: values.officialDate || null,
     employment_status: values.employmentStatus,

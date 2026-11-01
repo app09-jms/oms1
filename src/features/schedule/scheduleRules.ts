@@ -6,8 +6,8 @@ export type CheckStatus = 'on_shift' | 'mismatch' | 'pending_adjustment' | 'adju
 export interface Employee {
   code: string;
   fullName: string;
-  department: string;
-  position: string;
+  department: string | null;
+  position: string | null;
 }
 
 export interface ScheduleEntry {

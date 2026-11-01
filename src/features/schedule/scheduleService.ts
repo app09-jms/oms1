@@ -5,8 +5,8 @@ import type { CheckStatus, Employee, ScheduleEntry } from '@/features/schedule/s
 interface EmployeeRow {
   code: string;
   full_name: string;
-  department: string;
-  position: string;
+  department: string | null;
+  position: string | null;
 }
 
 interface ScheduleRow {
@@ -31,8 +31,8 @@ function isEmployeeRow(value: unknown): value is EmployeeRow {
   return (
     typeof row.code === 'string' &&
     typeof row.full_name === 'string' &&
-    typeof row.department === 'string' &&
-    typeof row.position === 'string'
+    (typeof row.department === 'string' || row.department === null) &&
+    (typeof row.position === 'string' || row.position === null)
   );
 }
 
