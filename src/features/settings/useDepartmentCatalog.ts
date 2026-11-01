@@ -60,6 +60,7 @@ export function useDepartmentCatalog() {
 
   return {
     departments,
+    positions,
     positionsOf,
     isLoading: resource.isLoading,
     loadError: resource.loadError,

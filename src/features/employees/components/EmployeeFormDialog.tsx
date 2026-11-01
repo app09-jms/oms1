@@ -1,12 +1,12 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { DEPARTMENTS } from '@/config/schedule';
 import type { HotelRef } from '@/features/auth/authRules';
+import type { Department, Position } from '@/features/settings/settingsRules';
 import { normalizeDraft, validateDraft, EMPLOYMENT_STATUSES, EMPLOYMENT_STATUS_LABELS, type EmployeeDraft } from '@/features/employees/employeeRules';
 
 interface EmployeeFormDialogProps {
@@ -15,6 +15,8 @@ interface EmployeeFormDialogProps {
   takenCodes: Set<string>;
   hotels: HotelRef[];
   hotelLocked: boolean;
+  departments: Department[];
+  positions: Position[];
   isSaving: boolean;
   errorMessage: string | null;
   onCancel: () => void;
@@ -34,12 +36,16 @@ function Field({ label, htmlFor, children }: { label: string; htmlFor: string; c
   );
 }
 
+const UNASSIGNED = '__none__';
+
 export function EmployeeFormDialog({
   mode,
   initialDraft,
   takenCodes,
   hotels,
   hotelLocked,
+  departments,
+  positions,
   isSaving,
   errorMessage,
   onCancel,
@@ -49,15 +55,36 @@ export function EmployeeFormDialog({
   const [validationError, setValidationError] = useState<string | null>(null);
   const isEdit = mode === 'edit';
 
+  const departmentNameToId = useMemo(
+    () => new Map(departments.map((dept) => [dept.name, dept.id])),
+    [departments]
+  );
+
+  const filteredPositions = useMemo(() => {
+    if (draft.department === null) return [];
+    const deptId = departmentNameToId.get(draft.department);
+    if (!deptId) return [];
+    return positions.filter((pos) => pos.departmentId === deptId);
+  }, [draft.department, departmentNameToId, positions]);
+
   function update<K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) {
-    setDraft((current) => ({ ...current, [key]: value }));
+    setDraft((current) => {
+      const next = { ...current, [key]: value };
+      if (key === 'department') {
+        const deptId = value === null ? null : departmentNameToId.get(value) ?? null;
+        const stillValid = deptId !== null && positions.some((pos) => pos.departmentId === deptId && pos.name === current.position);
+        if (!stillValid) next.position = null;
+      }
+      return next;
+    });
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const normalized = normalizeDraft(draft);
+    const validDepartmentNames = departments.map((dept) => dept.name);
     const message =
-      validateDraft(normalized) ??
+      validateDraft(normalized, validDepartmentNames) ??
       (!isEdit && takenCodes.has(normalized.code) ? 'Mã NV này đã tồn tại trong danh sách.' : null);
     if (message) {
       setValidationError(message);
@@ -114,30 +141,40 @@ export function EmployeeFormDialog({
             </Field>
             <Field label="Bộ phận" htmlFor="employee-department">
               <Select
-                value={draft.department ?? '__none__'}
-                onValueChange={(value) => update('department', value === '__none__' ? null : value)}
+                value={draft.department ?? UNASSIGNED}
+                onValueChange={(value) => update('department', value === UNASSIGNED ? null : value)}
               >
                 <SelectTrigger id="employee-department" className={fieldClass}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Chưa phân loại</SelectItem>
-                  {DEPARTMENTS.map((department) => (
-                    <SelectItem key={department} value={department}>
-                      {department}
+                  <SelectItem value={UNASSIGNED}>Chưa phân loại</SelectItem>
+                  {departments.map((department) => (
+                    <SelectItem key={department.id} value={department.name}>
+                      {department.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </Field>
             <Field label="Chức vụ" htmlFor="employee-position">
-              <Input
-                id="employee-position"
-                value={draft.position ?? ''}
-                onChange={(event) => update('position', event.target.value || null)}
-                placeholder="Nhân viên lễ tân"
-                className={fieldClass}
-              />
+              <Select
+                value={draft.position ?? UNASSIGNED}
+                onValueChange={(value) => update('position', value === UNASSIGNED ? null : value)}
+                disabled={draft.department === null}
+              >
+                <SelectTrigger id="employee-position" className={fieldClass}>
+                  <SelectValue placeholder={draft.department === null ? 'Chọn bộ phận trước' : 'Chọn chức vụ'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={UNASSIGNED}>Chưa phân loại</SelectItem>
+                  {filteredPositions.map((pos) => (
+                    <SelectItem key={pos.id} value={pos.name}>
+                      {pos.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field label="SĐT" htmlFor="employee-phone">
               <Input

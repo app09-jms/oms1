@@ -1,4 +1,3 @@
-import { DEPARTMENTS } from '@/config/schedule';
 import { normalizeSearchText } from '@/lib/text';
 
 export const DEFAULT_INITIAL_LEAVE_DAYS = 12;
@@ -92,7 +91,7 @@ export function createEmptyDraft(hotelId: string): EmployeeDraft {
     code: '',
     fullName: '',
     displayName: '',
-    department: DEPARTMENTS[0] ?? null,
+    department: null,
     position: '',
     probationDate: '',
     officialDate: '',
@@ -142,7 +141,7 @@ export function normalizeDraft(draft: EmployeeDraft): EmployeeDraft {
   };
 }
 
-export function validateDraft(input: EmployeeDraft): string | null {
+export function validateDraft(input: EmployeeDraft, validDepartments?: readonly string[]): string | null {
   const draft = normalizeDraft(input);
   if (!CODE_PATTERN.test(draft.code)) {
     return 'Mã NV chỉ gồm chữ, số, dấu chấm, gạch dưới hoặc gạch ngang (tối đa 20 ký tự).';
@@ -155,7 +154,7 @@ export function validateDraft(input: EmployeeDraft): string | null {
   if (draft.citizenIdIssuedDate && !DATE_PATTERN.test(draft.citizenIdIssuedDate)) {
     return 'Ngày cấp CCCD không hợp lệ.';
   }
-  if (draft.department !== null && !(DEPARTMENTS as readonly string[]).includes(draft.department)) return 'Bộ phận không hợp lệ.';
+  if (draft.department !== null && validDepartments !== undefined && !validDepartments.includes(draft.department)) return 'Bộ phận không hợp lệ.';
   if (draft.probationDate && !DATE_PATTERN.test(draft.probationDate)) return 'Ngày thử việc không hợp lệ.';
   if (draft.officialDate && !DATE_PATTERN.test(draft.officialDate)) return 'Ngày chính thức không hợp lệ.';
   if (!(EMPLOYMENT_STATUSES as readonly string[]).includes(draft.employmentStatus)) {

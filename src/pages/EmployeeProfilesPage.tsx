@@ -23,6 +23,7 @@ import {
 import { downloadEmployeeTemplate } from '@/features/employees/employeeExcel';
 import { fetchOwnEmployeeProfile } from '@/features/employees/employeeService';
 import { useEmployeeProfiles } from '@/features/employees/useEmployeeProfiles';
+import { useDepartmentCatalog } from '@/features/settings/useDepartmentCatalog';
 import { CreateEmployeeAccountDialog } from '@/features/employees/components/CreateEmployeeAccountDialog';
 import { EmployeeDeleteDialog } from '@/features/employees/components/EmployeeDeleteDialog';
 import { EmployeeFilterBar } from '@/features/employees/components/EmployeeFilterBar';
@@ -69,6 +70,7 @@ export function EmployeeProfilesPage() {
   const ownProfile = useCatalogResource(loadOwnProfile, 'Không thể tải hồ sơ của bạn.');
 
   const employees = useEmployeeProfiles(sessionToken, hotelScopeId, !isStaffView);
+  const departmentCatalog = useDepartmentCatalog();
   const roles = useRoles();
   const creatableRoles = (roles.data ?? []).filter((role) => canViewerCreateRole(account?.roleKey ?? '', role.key));
   const [filters, setFilters] = useState<EmployeeFilters>(() => ({
@@ -302,6 +304,8 @@ export function EmployeeProfilesPage() {
           takenCodes={takenCodes}
           hotels={hotels}
           hotelLocked={!isSuperAdmin}
+          departments={departmentCatalog.departments}
+          positions={departmentCatalog.positions}
           isSaving={employees.isSaving}
           errorMessage={employees.actionError}
           onCancel={() => setFormState(null)}
@@ -316,6 +320,8 @@ export function EmployeeProfilesPage() {
           takenCodes={takenCodes}
           hotels={hotels}
           hotelLocked={!isSuperAdmin}
+          departments={departmentCatalog.departments}
+          positions={departmentCatalog.positions}
           isSaving={employees.isSaving}
           errorMessage={employees.actionError}
           onCancel={() => setFormState(null)}
