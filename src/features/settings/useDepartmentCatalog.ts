@@ -2,7 +2,9 @@ import { useCallback } from 'react';
 import { useCatalogResource } from '@/hooks/useCatalogResource';
 import {
   deleteDepartment,
+  deleteDepartmentSafe,
   deletePosition,
+  deletePositionSafe,
   fetchDepartmentCatalog,
   insertDepartment,
   insertPosition,
@@ -36,6 +38,10 @@ export function useDepartmentCatalog() {
     return resource.runAction(() => deleteDepartment(department), 'Không thể xóa bộ phận.');
   }
 
+  function removeDepartmentSafe(oldName: string, newName: string | null) {
+    return resource.runAction(() => deleteDepartmentSafe(oldName, newName), 'Không thể xóa bộ phận.');
+  }
+
   function addPosition(department: Department, name: string) {
     return resource.runAction(() => insertPosition(department.id, name), 'Không thể thêm chức vụ.');
   }
@@ -46,6 +52,10 @@ export function useDepartmentCatalog() {
 
   function removePosition(department: Department, position: Position) {
     return resource.runAction(() => deletePosition(department, position), 'Không thể xóa chức vụ.');
+  }
+
+  function removePositionSafe(oldName: string, newName: string | null) {
+    return resource.runAction(() => deletePositionSafe(oldName, newName), 'Không thể xóa chức vụ.');
   }
 
   return {
@@ -59,8 +69,10 @@ export function useDepartmentCatalog() {
     addDepartment,
     editDepartment,
     removeDepartment,
+    removeDepartmentSafe,
     addPosition,
     editPosition,
     removePosition,
+    removePositionSafe,
   };
 }

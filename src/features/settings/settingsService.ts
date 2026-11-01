@@ -110,6 +110,12 @@ export async function renameDepartment(department: Department, name: string): Pr
   if (error) throw toDatabaseError(error, 'Không thể cập nhật bộ phận. Vui lòng thử lại.');
 }
 
+export async function countDepartmentEmployees(departmentName: string): Promise<number> {
+  return countRows(
+    supabase.from('employees').select('code', { count: 'exact', head: true }).eq('department', departmentName)
+  );
+}
+
 export async function deleteDepartment(department: Department): Promise<void> {
   const inUse = await countRows(
     supabase.from('employees').select('code', { count: 'exact', head: true }).eq('department', department.name)
@@ -117,6 +123,15 @@ export async function deleteDepartment(department: Department): Promise<void> {
   if (inUse > 0) throw new Error(IN_USE_MESSAGE);
 
   const { error } = await supabase.from('departments').delete().eq('id', department.id);
+  if (error) throw new Error('Không thể xóa bộ phận. Vui lòng thử lại.');
+}
+
+export async function deleteDepartmentSafe(oldName: string, newName: string | null): Promise<void> {
+  const { error } = await supabase.rpc('delete_department_safe', {
+    p_old_name: oldName,
+    p_new_name: newName,
+  });
+  if (error?.code === 'P0002') throw new Error('Không tìm thấy bộ phận hoặc bộ phận đích.');
   if (error) throw new Error('Không thể xóa bộ phận. Vui lòng thử lại.');
 }
 
@@ -140,6 +155,16 @@ export async function renamePosition(department: Department, position: Position,
   if (error) throw toDatabaseError(error, 'Không thể cập nhật chức vụ. Vui lòng thử lại.');
 }
 
+export async function countPositionEmployees(departmentName: string, positionName: string): Promise<number> {
+  return countRows(
+    supabase
+      .from('employees')
+      .select('code', { count: 'exact', head: true })
+      .eq('department', departmentName)
+      .eq('position', positionName)
+  );
+}
+
 export async function deletePosition(department: Department, position: Position): Promise<void> {
   const inUse = await countRows(
     supabase
@@ -151,6 +176,15 @@ export async function deletePosition(department: Department, position: Position)
   if (inUse > 0) throw new Error(IN_USE_MESSAGE);
 
   const { error } = await supabase.from('positions').delete().eq('id', position.id);
+  if (error) throw new Error('Không thể xóa chức vụ. Vui lòng thử lại.');
+}
+
+export async function deletePositionSafe(oldName: string, newName: string | null): Promise<void> {
+  const { error } = await supabase.rpc('delete_position_safe', {
+    p_old_name: oldName,
+    p_new_name: newName,
+  });
+  if (error?.code === 'P0002') throw new Error('Không tìm thấy chức vụ.');
   if (error) throw new Error('Không thể xóa chức vụ. Vui lòng thử lại.');
 }
 

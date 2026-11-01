@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useSession, useViewerRole } from '@/features/auth/AuthProvider';
+import { SUPER_ADMIN_ROLE_KEY } from '@/features/permissions/permissionRules';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { useDepartmentCatalog } from '@/features/settings/useDepartmentCatalog';
@@ -9,26 +11,51 @@ import {
   type Department,
   type Position,
 } from '@/features/settings/settingsRules';
-import { ConfirmActionDialog } from '@/components/shared/ConfirmActionDialog';
+import { countDepartmentEmployees, countPositionEmployees } from '@/features/settings/settingsService';
+import { DeleteDepartmentDialog } from '@/features/settings/components/DeleteDepartmentDialog';
+import { DeletePositionDialog } from '@/features/settings/components/DeletePositionDialog';
 import { DepartmentCard } from '@/features/settings/components/DepartmentCard';
 import { NameFormDialog } from '@/features/settings/components/NameFormDialog';
 
 type DepartmentDialog =
   | { kind: 'add-department' }
   | { kind: 'edit-department'; department: Department }
-  | { kind: 'delete-department'; department: Department }
+  | { kind: 'delete-department'; department: Department; inUseCount: number }
   | { kind: 'add-position'; department: Department }
   | { kind: 'edit-position'; department: Department; position: Position }
-  | { kind: 'delete-position'; department: Department; position: Position };
+  | { kind: 'delete-position'; department: Department; position: Position; inUseCount: number };
 
 export function DepartmentsTab() {
   const catalog = useDepartmentCatalog();
+  const session = useSession();
+  const { roleKey } = useViewerRole();
+  const isSuperAdmin = session.account.roleKey === SUPER_ADMIN_ROLE_KEY || roleKey === SUPER_ADMIN_ROLE_KEY;
   const [dialog, setDialog] = useState<DepartmentDialog | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
   function open(next: DepartmentDialog) {
     catalog.clearActionError();
     setDialog(next);
+  }
+
+  async function openDeleteDepartment(department: Department) {
+    catalog.clearActionError();
+    try {
+      const count = await countDepartmentEmployees(department.name);
+      setDialog({ kind: 'delete-department', department, inUseCount: count });
+    } catch {
+      setDialog({ kind: 'delete-department', department, inUseCount: 0 });
+    }
+  }
+
+  async function openDeletePosition(department: Department, position: Position) {
+    catalog.clearActionError();
+    try {
+      const count = await countPositionEmployees(department.name, position.name);
+      setDialog({ kind: 'delete-position', department, position, inUseCount: count });
+    } catch {
+      setDialog({ kind: 'delete-position', department, position, inUseCount: 0 });
+    }
   }
 
   function toggle(departmentId: string) {
@@ -82,14 +109,24 @@ export function DepartmentsTab() {
         );
       case 'delete-department':
         return (
-          <ConfirmActionDialog
-            title="Xóa bộ phận?"
-            description={`Bộ phận ${current.department.name} và toàn bộ chức vụ thuộc bộ phận sẽ bị xóa. Không thể xóa khi còn nhân viên thuộc bộ phận này.`}
-            confirmLabel="Xóa bộ phận"
+          <DeleteDepartmentDialog
+            department={current.department}
+            allDepartments={catalog.departments}
+            isSuperAdmin={isSuperAdmin}
+            inUseCount={current.inUseCount}
             isPending={catalog.isSaving}
             errorMessage={catalog.actionError}
             onCancel={() => setDialog(null)}
-            onConfirm={() => finish(catalog.removeDepartment(current.department), 'Đã xóa bộ phận.')}
+            onConfirm={(reassignTo) => {
+              if (current.inUseCount > 0 && isSuperAdmin) {
+                void finish(
+                  catalog.removeDepartmentSafe(current.department.name, reassignTo),
+                  'Đã xóa bộ phận và chuyển nhân viên.',
+                );
+              } else {
+                void finish(catalog.removeDepartment(current.department), 'Đã xóa bộ phận.');
+              }
+            }}
           />
         );
       case 'add-position':
@@ -126,16 +163,25 @@ export function DepartmentsTab() {
         );
       case 'delete-position':
         return (
-          <ConfirmActionDialog
-            title="Xóa chức vụ?"
-            description={`Chức vụ ${current.position.name} sẽ bị xóa khỏi bộ phận ${current.department.name}. Không thể xóa khi còn nhân viên giữ chức vụ này.`}
-            confirmLabel="Xóa chức vụ"
+          <DeletePositionDialog
+            department={current.department}
+            position={current.position}
+            allPositionsInDepartment={catalog.positionsOf(current.department)}
+            isSuperAdmin={isSuperAdmin}
+            inUseCount={current.inUseCount}
             isPending={catalog.isSaving}
             errorMessage={catalog.actionError}
             onCancel={() => setDialog(null)}
-            onConfirm={() =>
-              finish(catalog.removePosition(current.department, current.position), 'Đã xóa chức vụ.')
-            }
+            onConfirm={(reassignTo) => {
+              if (current.inUseCount > 0 && isSuperAdmin) {
+                void finish(
+                  catalog.removePositionSafe(current.position.name, reassignTo),
+                  'Đã xóa chức vụ và chuyển nhân viên.',
+                );
+              } else {
+                void finish(catalog.removePosition(current.department, current.position), 'Đã xóa chức vụ.');
+              }
+            }}
           />
         );
     }
@@ -189,9 +235,9 @@ export function DepartmentsTab() {
             onToggle={() => toggle(department.id)}
             onAddPosition={() => open({ kind: 'add-position', department })}
             onEditDepartment={() => open({ kind: 'edit-department', department })}
-            onDeleteDepartment={() => open({ kind: 'delete-department', department })}
+            onDeleteDepartment={() => void openDeleteDepartment(department)}
             onEditPosition={(position) => open({ kind: 'edit-position', department, position })}
-            onDeletePosition={(position) => open({ kind: 'delete-position', department, position })}
+            onDeletePosition={(position) => void openDeletePosition(department, position)}
           />
         ))}
       </div>
