@@ -13,7 +13,10 @@ import {
   runLeaveRollover,
   type RolloverRecord,
 } from '@/features/leave/leaveService';
-import { fetchEmployees, fetchSchedules } from '@/features/schedule/scheduleService';
+import { fetchEmployees, fetchSchedules, type EmployeeFilter } from '@/features/schedule/scheduleService';
+import { useSession, useViewerRole } from '@/features/auth/AuthProvider';
+import { useRoles } from '@/features/permissions/useRoles';
+import { SUPER_ADMIN_ROLE_KEY } from '@/features/permissions/permissionRules';
 import type { Employee, ScheduleEntry } from '@/features/schedule/scheduleRules';
 
 interface YearData {
@@ -24,6 +27,20 @@ interface YearData {
 }
 
 export function useLeave(year: number, filters: LeaveFilters) {
+  const session = useSession();
+  const { roleKey } = useViewerRole();
+  const roles = useRoles();
+  const { account, hotel } = session;
+  const hotelId = hotel.id;
+
+  const isSuperAdmin = account.roleKey === SUPER_ADMIN_ROLE_KEY;
+  const viewerRole = roles.data?.find((role) => role.key === roleKey) ?? null;
+  const dataScope = viewerRole?.dataScope ?? null;
+
+  const employeeFilter: EmployeeFilter = isSuperAdmin
+    ? {}
+    : { hotelId, employeeCode: account.employeeCode };
+
   const [data, setData] = useState<YearData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -34,20 +51,21 @@ export function useLeave(year: number, filters: LeaveFilters) {
     setIsLoading(true);
     const range = getYearRange(year);
     try {
-      const [employees, schedules, carryOverByCode, rollover] = await Promise.all([
-        fetchEmployees(),
-        fetchSchedules(range.from, range.to),
+      const employeeList = await fetchEmployees(employeeFilter);
+      const employeeCodes = employeeList.map((e) => e.code);
+      const [schedules, carryOverByCode, rollover] = await Promise.all([
+        fetchSchedules(range.from, range.to, isSuperAdmin ? null : employeeCodes),
         fetchCarryOverByCode(year),
         fetchRolloverRecord(year),
       ]);
-      setData({ employees, schedules, carryOverByCode, rollover });
+      setData({ employees: employeeList, schedules, carryOverByCode, rollover });
       setLoadError(null);
     } catch {
       setLoadError('Không thể tải sổ phép. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
-  }, [year]);
+  }, [year, employeeFilter, isSuperAdmin]);
 
   useEffect(() => {
     void refresh();

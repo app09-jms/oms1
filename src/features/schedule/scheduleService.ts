@@ -63,12 +63,22 @@ function toScheduleEntry(row: ScheduleRow): ScheduleEntry {
   };
 }
 
-export async function fetchEmployees(): Promise<Employee[]> {
-  const { data, error } = await supabase
+export interface EmployeeFilter {
+  hotelId?: string;
+  employeeCode?: string | null;
+}
+
+export async function fetchEmployees(filter?: EmployeeFilter): Promise<Employee[]> {
+  let query = supabase
     .from('employees')
     .select('code, full_name, department, position')
     .not('app_user_system_uid', 'is', null)
     .order('code', { ascending: true });
+
+  if (filter?.hotelId) query = query.eq('hotel_id', filter.hotelId);
+  if (filter?.employeeCode) query = query.eq('code', filter.employeeCode);
+
+  const { data, error } = await query;
 
   if (error) throw error;
   if (!Array.isArray(data) || !data.every(isEmployeeRow)) throw new Error('Unexpected employee data.');
@@ -80,12 +90,21 @@ export async function fetchEmployees(): Promise<Employee[]> {
   }));
 }
 
-export async function fetchSchedules(fromDate: string, toDate: string): Promise<ScheduleEntry[]> {
-  const { data, error } = await supabase
+export async function fetchSchedules(
+  fromDate: string,
+  toDate: string,
+  employeeCodes?: string[] | null
+): Promise<ScheduleEntry[]> {
+  let query = supabase
     .from('work_schedules')
     .select('id, employee_code, work_date, shift_code, check_status, requested_shift_code, adjustment_reason')
     .gte('work_date', fromDate)
     .lte('work_date', toDate);
+
+  if (employeeCodes && employeeCodes.length > 0) query = query.in('employee_code', employeeCodes);
+  else if (employeeCodes) query = query.eq('employee_code', '__none__');
+
+  const { data, error } = await query;
 
   if (error) throw error;
   if (!Array.isArray(data) || !data.every(isScheduleRow)) throw new Error('Unexpected schedule data.');

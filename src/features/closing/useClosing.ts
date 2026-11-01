@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchAttendanceHistory } from '@/features/attendance/attendanceService';
-import type { AttendanceRecord } from '@/features/attendance/attendanceRules';
-import { useSession } from '@/features/auth/AuthProvider';
+import type { AttendanceRecord, AttendanceScope } from '@/features/attendance/attendanceRules';
+import { useSession, useViewerRole } from '@/features/auth/AuthProvider';
 import { useHotelSettings } from '@/features/hotel/HotelSettingsProvider';
+import { useRoles } from '@/features/permissions/useRoles';
+import { SUPER_ADMIN_ROLE_KEY } from '@/features/permissions/permissionRules';
 import {
   applyClosingFilters,
   buildClosingKpis,
@@ -26,7 +28,7 @@ import {
   type LockedSummary,
   type PayrollPeriod,
 } from '@/features/closing/closingService';
-import { fetchEmployees, fetchSchedules } from '@/features/schedule/scheduleService';
+import { fetchEmployees, fetchSchedules, type EmployeeFilter } from '@/features/schedule/scheduleService';
 import type { Employee, ScheduleEntry } from '@/features/schedule/scheduleRules';
 import { fetchShiftTypes } from '@/features/settings/settingsService';
 import type { ShiftType } from '@/features/settings/settingsRules';
@@ -46,8 +48,28 @@ interface PeriodData {
 export function useClosing(period: string, filters: ClosingFilters) {
   const { settings } = useHotelSettings();
   const standardShiftHours = settings.standardShiftHours;
+  const session = useSession();
+  const { roleKey } = useViewerRole();
+  const roles = useRoles();
+  const { account, hotel } = session;
+  const hotelId = hotel.id;
+
+  const isSuperAdmin = account.roleKey === SUPER_ADMIN_ROLE_KEY;
+  const viewerRole = roles.data?.find((role) => role.key === roleKey) ?? null;
+  const dataScope = viewerRole?.dataScope ?? null;
+
+  const attendanceScope: AttendanceScope =
+    isSuperAdmin || dataScope === 'hotel'
+      ? { kind: 'hotel' }
+      : dataScope === 'department'
+        ? { kind: 'department', departments: viewerRole?.departments ?? [] }
+        : { kind: 'self', systemUid: account.systemUid };
+
+  const employeeFilter: EmployeeFilter = isSuperAdmin
+    ? {}
+    : { hotelId, employeeCode: account.employeeCode };
+
   const [data, setData] = useState<PeriodData | null>(null);
-  const hotelId = useSession().hotel.id;
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -57,10 +79,11 @@ export function useClosing(period: string, filters: ClosingFilters) {
     setIsLoading(true);
     const range = getPeriodRange(period);
     try {
-      const [records, employees, schedules, shiftTypes, adjustments, payrollPeriod, summaries] = await Promise.all([
-        fetchAttendanceHistory(hotelId, { kind: 'hotel' }, range),
-        fetchEmployees(),
-        fetchSchedules(range.from ?? period, range.to ?? period),
+      const employeeList = await fetchEmployees(employeeFilter);
+      const employeeCodes = employeeList.map((e) => e.code);
+      const [records, schedules, shiftTypes, adjustments, payrollPeriod, summaries] = await Promise.all([
+        fetchAttendanceHistory(hotelId, attendanceScope, range),
+        fetchSchedules(range.from ?? period, range.to ?? period, isSuperAdmin ? null : employeeCodes),
         fetchShiftTypes(),
         fetchPayrollAdjustments(range.from ?? period, range.to ?? period),
         fetchPayrollPeriod(period),
@@ -68,7 +91,7 @@ export function useClosing(period: string, filters: ClosingFilters) {
       ]);
       setData({
         records,
-        employees,
+        employees: employeeList,
         schedules,
         shiftTypes,
         adjustments,
@@ -81,7 +104,7 @@ export function useClosing(period: string, filters: ClosingFilters) {
     } finally {
       setIsLoading(false);
     }
-  }, [period]);
+  }, [period, hotelId, attendanceScope, employeeFilter, isSuperAdmin]);
 
   useEffect(() => {
     void refresh();
