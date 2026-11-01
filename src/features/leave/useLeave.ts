@@ -37,9 +37,10 @@ export function useLeave(year: number, filters: LeaveFilters) {
   const viewerRole = roles.data?.find((role) => role.key === roleKey) ?? null;
   const dataScope = viewerRole?.dataScope ?? null;
 
-  const employeeFilter: EmployeeFilter = isSuperAdmin
-    ? {}
-    : { hotelId, employeeCode: account.employeeCode };
+  const employeeFilter = useMemo<EmployeeFilter>(
+    () => (isSuperAdmin ? {} : { hotelId, employeeCode: account.employeeCode }),
+    [isSuperAdmin, hotelId, account.employeeCode],
+  );
 
   const [data, setData] = useState<YearData | null>(null);
   const [isLoading, setIsLoading] = useState(true);

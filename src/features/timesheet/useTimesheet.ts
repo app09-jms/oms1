@@ -39,17 +39,22 @@ export function useTimesheet() {
   const isSuperAdmin = account.roleKey === SUPER_ADMIN_ROLE_KEY;
   const viewerRole = roles.data?.find((role) => role.key === roleKey) ?? null;
   const dataScope = viewerRole?.dataScope ?? null;
+  const viewerDepartmentsKey = viewerRole?.departments.join('|') ?? '';
 
-  const attendanceScope: AttendanceScope =
-    isSuperAdmin || dataScope === 'hotel'
-      ? { kind: 'hotel' }
-      : dataScope === 'department'
-        ? { kind: 'department', departments: viewerRole?.departments ?? [] }
-        : { kind: 'self', systemUid: account.systemUid };
+  const attendanceScope = useMemo<AttendanceScope>(
+    () =>
+      isSuperAdmin || dataScope === 'hotel'
+        ? { kind: 'hotel' }
+        : dataScope === 'department'
+          ? { kind: 'department', departments: viewerDepartmentsKey ? viewerDepartmentsKey.split('|') : [] }
+          : { kind: 'self', systemUid: account.systemUid },
+    [isSuperAdmin, dataScope, viewerDepartmentsKey, account.systemUid],
+  );
 
-  const employeeFilter: EmployeeFilter = isSuperAdmin
-    ? {}
-    : { hotelId, employeeCode: account.employeeCode };
+  const employeeFilter = useMemo<EmployeeFilter>(
+    () => (isSuperAdmin ? {} : { hotelId, employeeCode: account.employeeCode }),
+    [isSuperAdmin, hotelId, account.employeeCode],
+  );
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
