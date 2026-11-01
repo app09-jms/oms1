@@ -88,7 +88,7 @@ export function AccountDetailsDialog({
             <span className="text-sm font-medium text-[#1F2A30]">Bộ phận</span>
             <div className="flex h-10 items-center rounded-md border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-sm text-[#5C6670]">
               {account.employee
-                ? account.employee.department
+                ? account.employee.department ?? 'Chưa phân loại'
                 : 'Chưa liên kết hồ sơ nhân viên nên chưa có bộ phận.'}
             </div>
           </div>

@@ -33,7 +33,7 @@ interface EmployeeRow {
   system_uid: string;
   code: string;
   full_name: string;
-  department: string;
+  department: string | null;
 }
 
 interface HotelOptionRow {
@@ -67,7 +67,7 @@ function isEmployeeRow(value: unknown): value is EmployeeRow {
     typeof row?.system_uid === 'string' &&
     typeof row.code === 'string' &&
     typeof row.full_name === 'string' &&
-    typeof row.department === 'string'
+    (row.department === null || typeof row.department === 'string')
   );
 }
 
@@ -102,7 +102,6 @@ export async function fetchUserAccounts(): Promise<{
     supabase.from('app_user_hotels').select('app_user_system_uid, hotel_id'),
   ]);
   if (userResult.error) throw userResult.error;
-  if (employeeResult.error) throw employeeResult.error;
   if (hotelResult.error) throw hotelResult.error;
   if (userHotelResult.error) throw userHotelResult.error;
 
@@ -113,12 +112,15 @@ export async function fetchUserAccounts(): Promise<{
     hotelIdsByUser.set(link.app_user_system_uid, ids);
   }
 
-  const employees = assertRows(employeeResult.data, isEmployeeRow).map((row) => ({
-    systemUid: row.system_uid,
-    code: row.code,
-    fullName: row.full_name,
-    department: row.department,
-  }));
+  let employees: EmployeeOption[] = [];
+  if (!employeeResult.error && employeeResult.data) {
+    employees = assertRows(employeeResult.data, isEmployeeRow).map((row) => ({
+      systemUid: row.system_uid,
+      code: row.code,
+      fullName: row.full_name,
+      department: row.department,
+    }));
+  }
   const employeeByUid = new Map(employees.map((employee) => [employee.systemUid, employee]));
 
   const accounts = assertRows(userResult.data, isAppUserRow).map((row): UserAccountRow => {

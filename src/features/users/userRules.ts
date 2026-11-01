@@ -17,7 +17,7 @@ export interface EmployeeOption {
   systemUid: string;
   code: string;
   fullName: string;
-  department: string;
+  department: string | null;
 }
 
 export interface UserAccountRow extends AppUser {
@@ -84,5 +84,5 @@ export function validateAccountDraft(draft: NewAccountDraft, employees: Employee
 }
 
 export function employeeOptionLabel(employee: EmployeeOption): string {
-  return `${employee.code} - ${employee.fullName} - ${employee.department}`;
+  return `${employee.code} - ${employee.fullName} - ${employee.department ?? 'Chưa phân loại'}`;
 }
